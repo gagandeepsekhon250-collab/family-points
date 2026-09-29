@@ -89,7 +89,7 @@ async function enter(u){try{
  if(!r){await fa.signOut();return go('login','Account not found. Ask your admin for a family code and request an account.')}
  const m={pending:'Your account is waiting for administrator approval.',rejected:'Your account request was rejected.',disabled:'Your account has been disabled.'}[r.status];
  if(m){await fa.signOut();return go('login',m)}
- DB=emptyDB();loaded={};SNAP={};ready=false;me={...r,id:u.uid,fid:f};view='app';attach();watchRing();render()
+ DB=emptyDB();loaded={};SNAP={};ready=false;me={...r,id:u.uid,fid:f};view='app';attach();watchRing();render();if('Notification' in window&&Notification.permission==='granted')subscribePush()
 }catch(x){try{await fa.signOut()}catch(y){}go('login','Could not sign in: '+(x.code||x.message))}}
 const id=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36);
 const U=i=>DB.users.find(u=>u.id===i);
@@ -134,10 +134,10 @@ async login(e){e.preventDefault();const f=e.target;busy=true;
  catch(x){busy=false;go('login',/credential|password|user-not-found|invalid-email/.test(x.code)?'Invalid username or password.':'Error: '+(x.code||x.message))}},
 logout(){fa.signOut().then(()=>location.reload())},
 tab(t){tab=t;if(t==='chat')setRead();if(t==='home'||t==='notifs'){F('notifs').filter(n=>n.uid===me.id).forEach(n=>n.read=true);save()}render()},
-send(e){e.preventDefault();const t=e.target.elements.t.value.trim();if(!t)return false;DB.msgs.push({id:id(),fid:me.fid,uid:me.id,text:t,ts:Date.now()});save();render();setTimeout(()=>{const i=document.querySelector('input[name=t]');i&&i.focus()},0);return false},
+send(e){e.preventDefault();const t=e.target.elements.t.value.trim();if(!t)return false;DB.msgs.push({id:id(),fid:me.fid,uid:me.id,text:t,ts:Date.now()});save();render();setTimeout(()=>{const i=document.querySelector('input[name=t]');i&&i.focus()},0);members().filter(m=>m.id!==me.id).forEach(m=>sendPush(m.id,me.name,t.slice(0,120)));return false},
 delMsg(m){const o=DB.msgs.find(x=>x.id===m);if(!o||(o.uid!==me.id&&!isAdmin()))return;DB.msgs=DB.msgs.filter(x=>x.id!==m);save();render()},
-notifPerm(){if(!('Notification' in window))return toast('Alerts are not supported in this browser');Notification.requestPermission().then(p=>toast(p==='granted'?'Alerts enabled':'Alerts blocked'))},
-startRoomCall(video){if(!DB.msgs.some(m=>m.call&&Date.now()-m.ts<6e5)){DB.msgs.push({id:id(),fid:me.fid,uid:me.id,text:'📞 started a family call',call:1,ts:Date.now()});save()}
+notifPerm(){if(!('Notification' in window))return toast('Alerts are not supported in this browser');Notification.requestPermission().then(p=>{toast(p==='granted'?'Alerts enabled':'Alerts blocked');if(p==='granted')subscribePush()})},
+startRoomCall(video){if(!DB.msgs.some(m=>m.call&&Date.now()-m.ts<6e5)){DB.msgs.push({id:id(),fid:me.fid,uid:me.id,text:'📞 started a family call',call:1,ts:Date.now()});save();members().filter(m=>m.id!==me.id).forEach(m=>sendPush(m.id,'📞 Family call','started by '+me.name))}
  Call.startRoom(video)},
 
 /* direct messages */
@@ -147,13 +147,13 @@ openDM(uid){dmWith=uid;const c=cid(me.id,uid);
 closeDM(){dmWith=null;render()},
 sendDM(e){e.preventDefault();const el=e.target.elements.t,v=el.value.trim();if(!v||!dmWith)return;const c=cid(me.id,dmWith),mid=id();
  fd.ref('families/'+me.fid+'/dms/'+c+'/'+mid).set({uid:me.id,text:v,ts:Date.now()}).catch(x=>toast('Not allowed ('+x.code+')'));
- notify(me.fid,dmWith,me.name+' sent you a message',{kind:'dm',from:me.id});save();el.value=''},
+ notify(me.fid,dmWith,me.name+' sent you a message',{kind:'dm',from:me.id});save();el.value='';sendPush(dmWith,me.name,v.slice(0,120))},
 delDM(mid){const c=cid(me.id,dmWith),m=(dmMsgs[c]||[]).find(x=>x.id===mid);if(!m||m.uid!==me.id)return;
  fd.ref('families/'+me.fid+'/dms/'+c+'/'+mid).remove()},
 /* announcements */
 ann(){if(!isAdmin())return;modal(`<h2>New Announcement</h2><label>Message</label><textarea id="ax" rows="4" maxlength="500"></textarea><div class="row"><button class="btn" onclick="H.saveAnn()">Post to family</button><button class="btn s" onclick="closeM()">Cancel</button></div>`)},
 saveAnn(){const v=ax.value.trim();if(!v)return toast('Enter a message');DB.anns.push({id:id(),fid:me.fid,uid:me.id,text:v,ts:Date.now()});
- act(`${me.name} posted an announcement`);members().filter(m=>m.id!==me.id).forEach(m=>notify(me.fid,m.id,'📢 '+me.name+': '+v.slice(0,80)));save();closeM();render()},
+ act(`${me.name} posted an announcement`);members().filter(m=>m.id!==me.id).forEach(m=>{notify(me.fid,m.id,'📢 '+me.name+': '+v.slice(0,80));sendPush(m.id,'📢 Announcement from '+me.name,v.slice(0,120))});save();closeM();render()},
 delAnn(a){if(!isAdmin())return;DB.anns=DB.anns.filter(x=>x.id!==a);save();render()},
 
 /* points */
@@ -243,7 +243,7 @@ photos(){if(me.role==='child')return'<p class="mu">Photos aren\'t available for 
 activity(){return`<h2>Family activity</h2><div class="card">${list(F('acts'),a=>`<div class="cm">${esc(a.text)}<div class="mu">${dtt(a.ts)}</div></div>`,'Nothing yet.')}</div>`},
 board(){const m=members().sort((a,b)=>bal(b.id)-bal(a.id));return`<h2>Leaderboard</h2><div class="card">${m.map((u,i)=>`<div class="row cm"><b style="width:28px">${['🥇','🥈','🥉'][i]||i+1}</b>${av(u)}<div class="sp"><b>${esc(u.name)}</b><div class="mu">@${esc(u.username)}</div></div><div class="pts">${bal(u.id)}</div></div>`).join('')}</div>`},
 notifs(){return`<h2>Notifications</h2><div class="card">${list(F('notifs').filter(n=>n.uid===me.id),n=>`<div class="cm">${esc(n.text)}<div class="mu">${dtt(n.ts)}</div></div>`,'No notifications.')}</div>`},
-profile(){return`<h2>My profile</h2><form class="card" onsubmit="H.profile(event)"><div class="row">${av(me,'l')}<div><b>@${esc(me.username)}</b><div class="mu">${me.role}</div></div></div><label>Name</label><input name="name" value="${esc(me.name)}" required><label>New profile picture</label><input name="pic" type="file" accept="image/*"><h3>Change password</h3><label>Current password</label><input name="cpw" type="password"><label>New password</label><input name="npw" type="password"><button class="btn">Save</button></form>`},
+profile(){return`<h2>My profile</h2><form class="card" onsubmit="H.profile(event)"><div class="row">${av(me,'l')}<div><b>@${esc(me.username)}</b><div class="mu">${me.role}</div></div></div><label>Name</label><input name="name" value="${esc(me.name)}" required><label>New profile picture</label><input name="pic" type="file" accept="image/*"><h3>Change password</h3><label>Current password</label><input name="cpw" type="password"><label>New password</label><input name="npw" type="password"><button class="btn">Save</button></form><button class="btn s" style="margin-top:10px" onclick="testPush()">🔔 Test notifications</button>`},
 admin(){if(!isAdmin())return'';const us=DB.users.filter(u=>u.fid===me.fid),fam=DB.families.find(f=>f.id===me.fid);
  const S=[['req','Account Requests'],['users','Members'],['rep','Reports'],['set','Settings']];let b='';
  if(adminSec==='req')b=list(us.filter(u=>u.status==='pending'),u=>`<div class="card row"><div class="mu" style="width:100%">ACCOUNT REQUEST</div>${av(u,'l')}<div class="sp"><b>${esc(u.name)}</b><div>@${esc(u.username)}</div><div class="mu">Requested ${dt(u.ts)}</div></div><button class="btn ok" onclick="H.setStatus('${u.id}','approved')">Approve</button><button class="btn no" onclick="H.setStatus('${u.id}','rejected')">Reject</button></div>`,'No pending requests.');
@@ -379,6 +379,45 @@ function showIncomingBanner(r){hideIncomingBanner();const name=r.name||nm(r.from
  document.body.appendChild(d);startRingtone();
  try{if('Notification' in window&&Notification.permission==='granted'){ringNotif=new Notification(name+' is calling',{body:'Tap to open Family Points',icon:'icon-192.png',requireInteraction:true,tag:'fp-call'});ringNotif.onclick=()=>{window.focus();ringNotif.close()}}}catch(e){}}
 function hideIncomingBanner(){const d=document.getElementById('ringBanner');if(d)d.remove();stopRingtone()}
+/* real push notifications (works even when the app isn't open) */
+const VAPID_PUBLIC_KEY='BExwg659cVbwXsmXErPDdUVyh_7jrDB5P8zZXOJZRv0008Det9ZrLtYMsQe5K95BjMUHkUT_15xzLzHkRArk7j4';
+function urlBase64ToUint8Array(b64){const pad='='.repeat((4-b64.length%4)%4),base64=(b64+pad).replace(/-/g,'+').replace(/_/g,'/');const raw=atob(base64),arr=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i);return arr}
+async function subscribePush(){
+ if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+ try{
+  const reg=await navigator.serviceWorker.ready;
+  if(Notification.permission!=='granted')return;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});
+  await fetch('/.netlify/functions/save-subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fid:me.fid,uid:me.id,subscription:sub.toJSON()})})
+ }catch(e){/* push not available on this device/browser; app still works without it */}
+}
+function sendPush(uid,title,body){
+ fetch('/.netlify/functions/send-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fid:me.fid,uid,title,body})}).catch(()=>{})
+}
+async function testPush(){
+ const lines=[];
+ const add=l=>{lines.push(l);modal('<h2>Notification test</h2><pre style="white-space:pre-wrap;font-size:13px;line-height:1.6">'+esc(lines.join('\n'))+'</pre><button class="btn s" onclick="closeM()" style="margin-top:10px">Close</button>')};
+ add('Starting test...');
+ if(!('Notification' in window)){add('❌ This browser does not support notifications at all.');return}
+ add('✅ Browser supports notifications.');
+ add('Permission status: '+Notification.permission);
+ if(Notification.permission!=='granted'){add('❌ Not granted. Go tap "Enable alerts" first and allow the popup.');return}
+ if(!('serviceWorker' in navigator)){add('❌ No service worker support.');return}
+ let reg;try{reg=await navigator.serviceWorker.ready;add('✅ Service worker is active.')}catch(e){add('❌ Service worker error: '+e.message);return}
+ let sub=await reg.pushManager.getSubscription();
+ if(!sub){add('No subscription yet, creating one...');try{sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)});add('✅ Subscribed.')}catch(e){add('❌ Could not subscribe: '+e.message);return}}
+ else add('✅ Already subscribed to push.');
+ add('Saving subscription to server...');
+ try{const r=await fetch('/.netlify/functions/save-subscription',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fid:me.fid,uid:me.id,subscription:sub.toJSON()})});const t=await r.text();add('Save response ('+r.status+'): '+t)}catch(e){add('❌ Save failed: '+e.message);return}
+ add('Asking the server to send you a test notification...');
+ try{const r=await fetch('/.netlify/functions/send-push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fid:me.fid,uid:me.id,title:'Test notification',body:'If you see this, it works!'})});const t=await r.text();add('Send response ('+r.status+'): '+t);
+  if(r.status===200&&t==='sent')add('✅ Server sent it. You should see a notification now.');
+  else if(t==='no subscription on file')add('⚠️ Server has no subscription saved for you yet — try again in a few seconds.');
+  else add('⚠️ Something went wrong server-side, see the message above.')
+ }catch(e){add('❌ Send failed: '+e.message)}
+}
+
 function watchRing(){fd.ref('families/'+me.fid+'/rtc/ring/'+me.id).on('value',s=>{const v=s.val();
  if(v&&!dmCall&&!room&&(!ringing||ringing.ts!==v.ts)){ringing=v;showIncomingBanner(v)}
  if(!v&&ringing){hideIncomingBanner();ringing=null}})}
