@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Family Points</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#5b5fef">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Family Points">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{--bg:#f4f5fb;--card:#fff;--tx:#1d2035;--mu:#6b7090;--pr:#5b5fef;--pr2:#eceeff;--bd:#e3e5f0;--ok:#16a34a;--no:#dc2626;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12131c;--card:#1b1d2b;--tx:#eceefa;--mu:#9a9fc0;--pr:#7d81ff;--pr2:#26294a;--bd:#2b2e45}}
+:root[data-theme="dark"]{--bg:#12131c;--card:#1b1d2b;--tx:#eceefa;--mu:#9a9fc0;--pr:#7d81ff;--pr2:#26294a;--bd:#2b2e45}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+h1,h2,h3{margin:0 0 .5rem}h2{font-size:1.2rem}h3{font-size:1rem}
+.wrap{max-width:1000px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:14px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.sp{flex:1}
+.btn{border:0;background:var(--pr);color:#fff;padding:9px 16px;border-radius:10px;font:inherit;font-weight:600;cursor:pointer}
+.btn.s{background:var(--pr2);color:var(--pr)}.btn.ok{background:var(--ok)}.btn.no{background:var(--no)}.btn.sm{padding:5px 10px;font-size:13px}
+input,textarea,select{width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit;margin:4px 0 10px}
+label{font-size:13px;color:var(--mu);font-weight:600}
+.av{width:44px;height:44px;border-radius:50%;background:var(--pr2);color:var(--pr);display:grid;place-items:center;font-weight:700;object-fit:cover;flex:none}
+.av.l{width:64px;height:64px;font-size:22px}
+.mu{color:var(--mu);font-size:13px}.pts{font-size:1.6rem;font-weight:800;color:var(--pr)}
+nav{position:sticky;top:env(safe-area-inset-top,0px);background:var(--card);border-bottom:1px solid var(--bd);z-index:5}
+nav .in{display:flex;gap:4px;overflow-x:auto;max-width:1000px;margin:0 auto;padding:8px 12px;align-items:center}
+nav button{border:0;background:none;color:var(--mu);padding:8px 12px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--pr2);color:var(--pr)}
+.auth{max-width:420px;margin:6vh auto;padding:16px}
+.msg{padding:10px;border-radius:10px;margin-bottom:10px;background:var(--pr2)}.msg.e{background:#fee2e2;color:#991b1b}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.chip{padding:8px 14px;border-radius:20px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);cursor:pointer;font:inherit;font-weight:600}
+.chip.on{background:var(--pr);color:#fff;border-color:var(--pr)}
+.modal{position:fixed;inset:0;background:#0008;display:grid;place-items:center;padding:16px;z-index:20;overflow:auto}
+.modal>div{background:var(--card);border-radius:16px;padding:20px;width:100%;max-width:440px;max-height:92vh;overflow:auto}
+.ph{width:100%;border-radius:10px;margin:8px 0;max-height:420px;object-fit:cover}
+.cm{border-top:1px solid var(--bd);padding:6px 0;font-size:14px}
+.bd{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--pr2);color:var(--pr);font-weight:700}
+.tabs2{display:flex;gap:6px;margin-bottom:12px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 18px;border-radius:20px;z-index:30;display:none}
+.tile{position:relative;background:#111;border-radius:12px;overflow:hidden;aspect-ratio:4/3}.tile video{width:100%;height:100%;object-fit:cover;display:block}.tile .tn{position:absolute;bottom:4px;left:6px;color:#fff;font-size:11px;background:#0007;padding:2px 8px;border-radius:6px}
+</style></head><body>
+<div id="app"></div><div id="toast"></div><div id="callOverlay" style="display:none;position:fixed;inset:0;background:#0d0e16;z-index:50;flex-direction:column"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let DB,me=null,tab='home',view='login',flash='',pick=10,adminSec='req';
+/* ===== FIREBASE CONFIG: replace with your own if login errors mention the API key ===== */
+const CFG={apiKey:"AIzaSyBbX9-Nx0Gd-TVfE-V--EMZu1weoB4sUXk",authDomain:"familyappweb-fbe04.firebaseapp.com",databaseURL:"https://familyappweb-fbe04-default-rtdb.firebaseio.com",projectId:"familyappweb-fbe04",appId:"1:301586737395:web:c7a3583f3b47e9be20ef86"};
+firebase.initializeApp(CFG);const fa=firebase.auth(),fd=firebase.database();
+const emptyDB=()=>({families:[],users:[],points:[],notes:[],comments:[],photos:[],acts:[],notifs:[],msgs:[],anns:[],reports:[]});
+DB=emptyDB();const COLS=Object.keys(DB);
+let ready=false,busy=false,loaded={},SNAP={};
+let dmWith=null,dmMsgs={},dmSub={};
+const cid=(a,b)=>[a,b].sort().join('~');
+const arr=o=>Object.entries(o||{}).map(([k,v])=>({...v,id:k,fid:me.fid}));
+const val1=(c,r)=>{const {id:i,fid:f,...v}=r;return JSON.stringify(c==='families'?{name:v.name,code:v.code}:v)};
+const snapOf=c=>{const o={};DB[c].forEach(r=>o[r.id]=val1(c,r));return o};
+/* save(): diffs local data against last server copy and pushes only the changes */
+const save=()=>{if(!me||!ready)return;const up={},b='families/'+me.fid+'/';
+ const P=(c,r)=>c==='families'?b+'meta':c==='notifs'?b+'notifs/'+r.uid+'/'+r.id:b+c+'/'+r.id;
+ COLS.forEach(c=>{const old=SNAP[c]||{},now={};
+  DB[c].forEach(r=>{now[r.id]=val1(c,r);if(old[r.id]!==now[r.id])up[P(c,r)]=JSON.parse(now[r.id])});
+  Object.keys(old).forEach(k=>{if(!(k in now))up[P(c,{...JSON.parse(old[k]),id:k})]=null});SNAP[c]=now});
+ if(Object.keys(up).length)fd.ref().update(up).catch(x=>{toast('Not allowed ('+x.code+')');setTimeout(()=>location.reload(),1800)})};
+function live(){ready=!!(loaded.users&&loaded.families);if(!ready)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName)&&document.getElementById('app').contains(a))return;render()}
+function attach(){const b='families/'+me.fid+'/';
+ const on=(c,p,f)=>fd.ref(b+p).on('value',s=>{const first=!loaded[c],prev=DB[c];DB[c]=f(s.val());SNAP[c]=snapOf(c);loaded[c]=1;if(c==='msgs'&&!first)incoming(prev);live()},()=>H.logout());
+ on('families','meta',v=>v?[{...v,id:me.fid,fid:me.fid}]:[]);
+ ['users','points','notes','comments','photos','acts','msgs','anns'].forEach(c=>on(c,c,arr));
+ on('notifs','notifs/'+me.id,arr);
+ if(me.role==='admin')on('reports','reports',arr)}
+/* ---- messages: unread count + alerts ---- */
+const RK=()=>'fp_r_'+me.id;
+const setRead=()=>{try{localStorage.setItem(RK(),Date.now())}catch(e){}};
+const unread=()=>{let t=0;try{t=+localStorage.getItem(RK())||0}catch(e){}return F('msgs').filter(m=>m.uid!==me.id&&m.ts>t).length};
+function incoming(prev){const seen=new Set(prev.map(m=>m.id));DB.msgs.filter(m=>!seen.has(m.id)&&m.uid!==me.id&&m.ts>Date.now()-60000).forEach(m=>{
+ const n=nm(m.uid);if(tab!=='chat')toast('💬 '+n+': '+m.text.slice(0,60));
+ try{if('Notification' in window&&Notification.permission==='granted'&&(document.hidden||tab!=='chat'))new Notification(n,{body:m.text.slice(0,120),icon:'icon-192.png'})}catch(e){}
+ try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}})}
+async function enter(u){try{
+ const f=(await fd.ref('userFam/'+u.uid).get()).val(),r=f&&(await fd.ref('families/'+f+'/users/'+u.uid).get()).val();
+ if(!r){await fa.signOut();return go('login','Account not found. Ask your admin for a family code and request an account.')}
+ const m={pending:'Your account is waiting for administrator approval.',rejected:'Your account request was rejected.',disabled:'Your account has been disabled.'}[r.status];
+ if(m){await fa.signOut();return go('login',m)}
+ DB=emptyDB();loaded={};SNAP={};ready=false;me={...r,id:u.uid,fid:f};view='app';attach();watchRing();render()
+}catch(x){try{await fa.signOut()}catch(y){}go('login','Could not sign in: '+(x.code||x.message))}}
+const id=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36);
+const U=i=>DB.users.find(u=>u.id===i);
+const F=c=>DB[c].filter(x=>x.fid===me.fid).sort((a,b)=>b.ts-a.ts);
+const members=()=>DB.users.filter(u=>u.fid===me.fid&&u.status==='approved');
+const bal=i=>DB.points.filter(p=>p.to===i).reduce((s,p)=>s+p.amt,0);
+const isAdmin=()=>me.role==='admin';
+const dt=t=>new Date(t).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+const dtt=t=>new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const nm=i=>U(i)?U(i).name:'Former member';
+const av=(u,c='')=>u&&u.pic?`<img class="av ${c}" src="${u.pic}" alt="">`:`<div class="av ${c}">${esc((u?u.name:'?')[0]||'?').toUpperCase()}</div>`;
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',2600)}
+function img(file,max){return new Promise(r=>{if(!file)return r(null);const f=new FileReader();f.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.75))};i.onerror=()=>r(null);i.src=f.result};f.readAsDataURL(file)})}
+const act=t=>DB.acts.push({id:id(),fid:me.fid,ts:Date.now(),text:t});
+const notify=(fid,u,t,extra)=>DB.notifs.push({id:id(),fid,uid:u,ts:Date.now(),text:t,read:false,...(extra||{})});
+const code=()=>Math.random().toString(36).slice(2,8).toUpperCase();
+const val=(f,n)=>f.elements[n].value.trim();
+
+/* ---------- auth ---------- */
+const H={
+async setup(e){e.preventDefault();const f=e.target,un=val(f,'un').toLowerCase(),p=f.elements.pw.value;
+ if(!/^[a-z0-9_.-]{3,20}$/.test(un))return go('setup','Username: 3-20 letters, numbers, . _ -');
+ if(p.length<6)return go('setup','Password must be at least 6 characters.');
+ busy=true;try{const fid=id(),cd=code(),pic=await img(f.elements.pic.files[0],200),c=await fa.createUserWithEmailAndPassword(un+'@familypoints.app',p),k=c.user.uid;
+  await fd.ref('userFam/'+k).set(fid);
+  await fd.ref('families/'+fid+'/users/'+k).set({name:val(f,'name'),username:un,pic,role:'admin',status:'approved',ts:Date.now()});
+  await fd.ref('families/'+fid+'/meta').set({name:val(f,'fam'),code:cd});
+  await fd.ref('codes/'+cd).set(fid);
+  busy=false;await enter(c.user)}catch(x){busy=false;go('setup',x.code==='auth/email-already-in-use'?'That username is taken.':'Error: '+(x.code||x.message))}},
+async register(e){e.preventDefault();const f=e.target,un=val(f,'un').toLowerCase(),p=f.elements.pw.value;
+ if(!/^[a-z0-9_.-]{3,20}$/.test(un))return go('register','Username: 3-20 letters, numbers, . _ -');
+ if(p.length<6)return go('register','Password must be at least 6 characters.');
+ if(p!==f.elements.pw2.value)return go('register','Passwords do not match.');
+ busy=true;try{const fid=(await fd.ref('codes/'+val(f,'code').toUpperCase()).get()).val();
+  if(!fid){busy=false;return go('register','Family code not found.')}
+  const pic=await img(f.elements.pic.files[0],200),c=await fa.createUserWithEmailAndPassword(un+'@familypoints.app',p);
+  await fd.ref('userFam/'+c.user.uid).set(fid);
+  await fd.ref('families/'+fid+'/users/'+c.user.uid).set({name:val(f,'name'),username:un,pic,role:'member',status:'pending',ts:Date.now()});
+  await fa.signOut();busy=false;go('registered')}catch(x){busy=false;go('register',x.code==='auth/email-already-in-use'?'That username is taken.':'Error: '+(x.code||x.message))}},
+async login(e){e.preventDefault();const f=e.target;busy=true;
+ try{const c=await fa.signInWithEmailAndPassword(val(f,'un').toLowerCase()+'@familypoints.app',f.elements.pw.value);busy=false;await enter(c.user)}
+ catch(x){busy=false;go('login',/credential|password|user-not-found|invalid-email/.test(x.code)?'Invalid username or password.':'Error: '+(x.code||x.message))}},
+logout(){fa.signOut().then(()=>location.reload())},
+tab(t){tab=t;if(t==='chat')setRead();if(t==='home'||t==='notifs'){F('notifs').filter(n=>n.uid===me.id).forEach(n=>n.read=true);save()}render()},
+send(e){e.preventDefault();const t=e.target.elements.t.value.trim();if(!t)return false;DB.msgs.push({id:id(),fid:me.fid,uid:me.id,text:t,ts:Date.now()});save();render();setTimeout(()=>{const i=document.querySelector('input[name=t]');i&&i.focus()},0);return false},
+delMsg(m){const o=DB.msgs.find(x=>x.id===m);if(!o||(o.uid!==me.id&&!isAdmin()))return;DB.msgs=DB.msgs.filter(x=>x.id!==m);save();render()},
+notifPerm(){if(!('Notification' in window))return toast('Alerts are not supported in this browser');Notification.requestPermission().then(p=>toast(p==='granted'?'Alerts enabled':'Alerts blocked'))},
+startRoomCall(video){if(!DB.msgs.some(m=>m.call&&Date.now()-m.ts<6e5)){DB.msgs.push({id:id(),fid:me.fid,uid:me.id,text:'📞 started a family call',call:1,ts:Date.now()});save()}
+ Call.startRoom(video)},
+
+/* direct messages */
+openDM(uid){dmWith=uid;const c=cid(me.id,uid);
+ if(!dmSub[c]){dmSub[c]=1;fd.ref('families/'+me.fid+'/dms/'+c).on('value',s=>{dmMsgs[c]=Object.entries(s.val()||{}).map(([k,v])=>({...v,id:k})).sort((a,b)=>a.ts-b.ts);live()})}
+ F('notifs').filter(n=>n.uid===me.id&&n.kind==='dm'&&n.from===uid&&!n.read).forEach(n=>n.read=true);save();render()},
+closeDM(){dmWith=null;render()},
+sendDM(e){e.preventDefault();const el=e.target.elements.t,v=el.value.trim();if(!v||!dmWith)return;const c=cid(me.id,dmWith),mid=id();
+ fd.ref('families/'+me.fid+'/dms/'+c+'/'+mid).set({uid:me.id,text:v,ts:Date.now()}).catch(x=>toast('Not allowed ('+x.code+')'));
+ notify(me.fid,dmWith,me.name+' sent you a message',{kind:'dm',from:me.id});save();el.value=''},
+delDM(mid){const c=cid(me.id,dmWith),m=(dmMsgs[c]||[]).find(x=>x.id===mid);if(!m||m.uid!==me.id)return;
+ fd.ref('families/'+me.fid+'/dms/'+c+'/'+mid).remove()},
+/* announcements */
+ann(){if(!isAdmin())return;modal(`<h2>New Announcement</h2><label>Message</label><textarea id="ax" rows="4" maxlength="500"></textarea><div class="row"><button class="btn" onclick="H.saveAnn()">Post to family</button><button class="btn s" onclick="closeM()">Cancel</button></div>`)},
+saveAnn(){const v=ax.value.trim();if(!v)return toast('Enter a message');DB.anns.push({id:id(),fid:me.fid,uid:me.id,text:v,ts:Date.now()});
+ act(`${me.name} posted an announcement`);members().filter(m=>m.id!==me.id).forEach(m=>notify(me.fid,m.id,'📢 '+me.name+': '+v.slice(0,80)));save();closeM();render()},
+delAnn(a){if(!isAdmin())return;DB.anns=DB.anns.filter(x=>x.id!==a);save();render()},
+
+/* points */
+give(){const ms=members().filter(m=>m.id!==me.id&&m.role==='child');if(!ms.length)return toast('No child accounts to give points to yet');
+ modal(`<h2>Give Points</h2><label>To</label><select id="gt">${ms.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`)}</select>
+ <label>Points</label><div class="chips">${[10,15,20,25,30,35,40,'Custom'].map(v=>`<button type="button" class="chip ${v===pick?'on':''}" onclick="H.pick('${v}')">${v}</button>`).join('')}</div>
+ <input id="gc" type="number" min="1" max="1000" placeholder="Custom amount" style="display:${pick==='Custom'?'block':'none'}"><label>Reason (optional)</label><input id="gr" maxlength="120">
+ <div class="row"><button class="btn" onclick="H.sendPts()">Send</button><button class="btn s" onclick="closeM()">Cancel</button></div>`)},
+pick(v){pick=v==='Custom'?v:+v;const t=document.getElementById('gt').value,r=document.getElementById('gr').value;H.give();document.getElementById('gt').value=t;document.getElementById('gr').value=r},
+sendPts(){const to=gt.value,a=pick==='Custom'?Math.floor(+gc.value):pick;if(!(a>=1&&a<=1000))return toast('Enter 1-1000 points');
+ const t=U(to);if(!t||t.fid!==me.fid||to===me.id)return;
+ DB.points.push({id:id(),fid:me.fid,from:me.id,to,amt:a,reason:gr.value.trim(),ts:Date.now()});act(`${me.name} gave ${a} points to ${t.name}`);notify(me.fid,to,`${me.name} gave you ${a} points`);save();closeM();render();toast('Points sent')},
+/* notes */
+note(n){const o=n?DB.notes.find(x=>x.id===n):null;modal(`<h2>${o?'Edit':'New'} Note</h2><label>Title</label><input id="nt" maxlength="80" value="${esc(o?o.title:'')}"><label>Note</label><textarea id="nb" rows="5">${esc(o?o.body:'')}</textarea>
+ <div class="row"><button class="btn" onclick="H.saveNote('${n||''}')">Save</button><button class="btn s" onclick="closeM()">Cancel</button></div>`)},
+saveNote(n){if(!nt.value.trim())return toast('Title required');if(n){const o=DB.notes.find(x=>x.id===n&&x.fid===me.fid&&x.uid===me.id);if(!o)return;o.title=nt.value.trim();o.body=nb.value.trim()}
+ else{DB.notes.push({id:id(),fid:me.fid,uid:me.id,title:nt.value.trim(),body:nb.value.trim(),ts:Date.now()});act(`${me.name} created a note "${nt.value.trim()}"`)}save();closeM();render()},
+delNote(n){const o=DB.notes.find(x=>x.id===n);if(!o||o.fid!==me.fid||(o.uid!==me.id&&!isAdmin()))return;if(!confirm('Delete this note?'))return;DB.notes=DB.notes.filter(x=>x.id!==n);if(isAdmin())DB.comments=DB.comments.filter(c=>c.tid!==n);save();render()},
+comment(t,el){const v=el.value.trim();if(!v)return;DB.comments.push({id:id(),fid:me.fid,tid:t,uid:me.id,text:v,ts:Date.now()});act(`${me.name} commented`);save();render()},
+delCm(c){const o=DB.comments.find(x=>x.id===c);if(!o||o.fid!==me.fid||(o.uid!==me.id&&!isAdmin()))return;DB.comments=DB.comments.filter(x=>x.id!==c);save();render()},
+/* photos */
+async photo(inp){const s=await img(inp.files[0],900);if(!s)return;DB.photos.push({id:id(),fid:me.fid,uid:me.id,src:s,cap:prompt('Caption (optional)')||'',ts:Date.now()});act(`${me.name} uploaded a photo`);save();render()},
+delPh(p){const o=DB.photos.find(x=>x.id===p);if(!o||o.fid!==me.fid||(o.uid!==me.id&&!isAdmin()))return;if(!confirm('Delete this photo?'))return;DB.photos=DB.photos.filter(x=>x.id!==p);DB.reports=DB.reports.filter(r=>r.tid!==p);save();render()},
+report(t,k){const r=prompt('Why are you reporting this?');if(!r)return;DB.reports.push({id:id(),fid:me.fid,tid:t,kind:k,by:me.id,why:r,ts:Date.now()});save();toast('Reported to admins')},
+/* profile */
+async profile(e){e.preventDefault();const f=e.target,u=U(me.id);u.name=val(f,'name')||u.name;const p=await img(f.elements.pic.files[0],200);if(p)u.pic=p;
+ if(f.elements.npw.value){if(f.elements.npw.value.length<6)return toast('Min 6 characters');
+  try{const cu=fa.currentUser;await cu.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(me.username+'@familypoints.app',f.elements.cpw.value));await cu.updatePassword(f.elements.npw.value)}catch(x){return toast('Current password is wrong')}}
+ save();render();toast('Profile saved')},
+/* admin */
+setStatus(u,s){const o=U(u);if(!isAdmin()||!o||o.fid!==me.fid)return;if(o.id===me.id)return toast("You can't change your own account");o.status=s;
+ const m={approved:'Your account was approved. Welcome!',rejected:'Your account request was rejected.',disabled:'Your account was disabled.'}[s];notify(me.fid,u,m);act(`${o.name}: ${s}`);save();render()},
+role(u,r){const o=U(u);if(!isAdmin()||!o||o.fid!==me.fid||o.id===me.id)return toast("You can't change your own role");o.role=r;save();render()},
+delUser(u){const o=U(u);if(!isAdmin()||!o||o.fid!==me.fid||o.id===me.id)return;if(!confirm('Permanently delete '+o.name+'?'))return;DB.users=DB.users.filter(x=>x.id!==u);save();render()},
+reset(u){alert('Firebase does not let a browser app reset another person\'s password. Workaround: click Delete on this member, delete their user in the Firebase console (Authentication > Users), and have them request the account again.')},
+edit(u){const o=U(u);if(!isAdmin()||!o||o.fid!==me.fid)return;const n=prompt('Name',o.name);if(n)o.name=n.trim();save();render()},
+dismiss(r){DB.reports=DB.reports.filter(x=>x.id!==r||x.fid!==me.fid);save();render()},
+fam(){const f=DB.families.find(x=>x.id===me.fid);const n=prompt('Family name',f.name);if(n)f.name=n.trim();save();render()},
+newCode(){const f=DB.families[0],old=f.code,c=code();f.code=c;fd.ref('codes/'+c).set(me.fid).then(()=>fd.ref('codes/'+old).remove());save();render()}
+};
+function modal(h){closeM();const d=document.createElement('div');d.className='modal';d.id='m';d.onclick=e=>{if(e.target===d)closeM()};d.innerHTML='<div>'+h+'</div>';document.body.appendChild(d)}
+function closeM(){const m=document.getElementById('m');if(m)m.remove()}
+function go(v,m=''){view=v;flash=m;render()}
+
+/* ---------- views ---------- */
+const auth=(t,body,m)=>`<div class="auth"><div class="card"><h1>🏠 Family Points</h1><p class="mu">${t}</p>${m?`<div class="msg ${/wait|submitted|created/.test(m)?'':'e'}">${esc(m)}</div>`:''}${body}</div></div>`;
+const pic='<label>Profile picture (optional)</label><input name="pic" type="file" accept="image/*">';
+function render(){
+ const A=document.getElementById('app');
+ if(!me){
+  if(view==='setup')return A.innerHTML=auth('First-time setup: create your family and administrator account.',`<form onsubmit="H.setup(event)"><label>Family name</label><input name="fam" required><label>Your name</label><input name="name" required><label>Username</label><input name="un" required autocapitalize="none"><label>Password</label><input name="pw" type="password" required>${pic}<button class="btn" style="width:100%">Create Family</button></form>`,flash);
+  if(view==='register')return A.innerHTML=auth('Request an account. An administrator must approve it.',`<form onsubmit="H.register(event)"><label>Family code (ask your admin)</label><input name="code" required><label>Name</label><input name="name" required><label>Username</label><input name="un" required autocapitalize="none"><label>Password</label><input name="pw" type="password" required><label>Confirm password</label><input name="pw2" type="password" required>${pic}<button class="btn" style="width:100%">Request Account</button></form><p class="mu"><a href="#" onclick="go('login');return false">Back to login</a></p>`,flash);
+  if(view==='registered')return A.innerHTML=auth('',`<div class="msg">Your account has been submitted and is waiting for administrator approval.</div><button class="btn s" onclick="go('login')">Back to login</button>`);
+  return A.innerHTML=auth('Private family points, notes and photos.',`<form onsubmit="H.login(event)"><label>Username</label><input name="un" required autocapitalize="none"><label>Password</label><input name="pw" type="password" required><button class="btn" style="width:100%">Log In</button></form><p class="mu">No account? <a href="#" onclick="go('register');return false">Request one</a> &middot; <a href="#" onclick="go('setup');return false">Create a new family</a></p>`,flash)}
+ if(!ready)return A.innerHTML=auth('Loading...','');const m=U(me.id);if(!m||m.status!=='approved')return H.logout();me=m;
+ const un=unread(),dmun=F('notifs').filter(n=>n.uid===me.id&&!n.read&&n.kind==='dm').length,nn=F('notifs').filter(n=>n.uid===me.id&&!n.read).length,pend=isAdmin()?DB.users.filter(u=>u.fid===me.fid&&u.status==='pending').length:0;
+ const isChild=me.role==='child';
+ const T=[['home','Home'],['members','Family'],...(isChild?[]:[['notes','Notes'],['photos','Photos'],['activity','Activity']]),['board','Leaderboard'],['chat','Messages'+(un?' ('+un+')':'')],['dms','Direct'+(dmun?' ('+dmun+')':'')],['call','Call'],['notifs','Alerts'+(nn?' ('+nn+')':'')],['profile','Profile']];if(isAdmin())T.push(['admin','Admin'+(pend?' ('+pend+')':'')]);
+ const fam=DB.families.find(f=>f.id===me.fid);try{navigator.setAppBadge&&(un?navigator.setAppBadge(un):navigator.clearAppBadge())}catch(e){}
+ A.innerHTML=`<nav><div class="in"><b style="margin-right:8px">🏠 ${esc(fam.name)}</b>${T.map(t=>`<button class="${tab===t[0]?'on':''}" onclick="H.tab('${t[0]}')">${t[1]}</button>`).join('')}<span class="sp"></span><button onclick="H.logout()">Log out</button></div></nav><div class="wrap">${V[tab]()}</div>`}
+const mcard=m=>`<div class="card row" style="margin:0">${av(m)}<div class="sp"><b>${esc(m.name)}</b> ${m.role==='admin'?'<span class="bd">Admin</span>':m.role==='child'?'<span class="bd">Child</span>':''}<div class="mu">@${esc(m.username)}</div></div><div class="pts">${bal(m.id)}</div></div>`;
+const list=(a,f,e)=>a.length?a.map(f).join(''):`<p class="mu">${e}</p>`;
+const ptRow=p=>`<div class="cm"><b>${esc(nm(p.from))}</b> → <b>${esc(nm(p.to))}</b> <span class="bd">+${p.amt}</span> ${esc(p.reason)}<div class="mu">${dtt(p.ts)}</div></div>`;
+const noteCard=n=>{const cs=F('comments').filter(c=>c.tid===n.id).reverse(),o=U(n.uid);return`<div class="card"><div class="row">${av(o)}<div class="sp"><b>${esc(n.title)}</b><div class="mu">${esc(nm(n.uid))} · ${dtt(n.ts)}</div></div>${n.uid===me.id?`<button class="btn s sm" onclick="H.note('${n.id}')">Edit</button>`:''}${n.uid===me.id||isAdmin()?`<button class="btn no sm" onclick="H.delNote('${n.id}')">Delete</button>`:''}</div><p style="white-space:pre-wrap">${esc(n.body)}</p>${cmts(n.id,cs)}</div>`};
+const cmts=(t,cs)=>cs.map(c=>`<div class="cm"><b>${esc(nm(c.uid))}</b> ${esc(c.text)} ${c.uid===me.id||isAdmin()?`<a href="#" class="mu" onclick="H.delCm('${c.id}');return false">delete</a>`:''}</div>`).join('')+`<input placeholder="Write a comment and press Enter" maxlength="300" onkeydown="if(event.key==='Enter'){H.comment('${t}',this)}">`;
+const V={
+chat(){setRead();const ms=F('msgs').slice(0,100).reverse();
+ return`<div class="row"><h2 class="sp">Family messages</h2><button class="btn s sm" onclick="H.notifPerm()">🔔 Enable alerts</button></div><div class="card" id="chatbox" style="max-height:60vh;overflow:auto">${ms.length?ms.map(m=>{const mine=m.uid===me.id;return`<div style="display:flex;gap:8px;margin:8px 0;${mine?'flex-direction:row-reverse':''}">${av(U(m.uid))}<div style="max-width:75%;background:${mine?'var(--pr)':'var(--pr2)'};color:${mine?'#fff':'var(--tx)'};padding:8px 12px;border-radius:14px"><div style="font-size:11px;opacity:.8">${esc(nm(m.uid))} · ${dtt(m.ts)}</div>${esc(m.text)}${m.call?`<div><button class="btn sm" style="margin-top:6px;background:#16a34a" onclick="Call.startRoom(true)">Join call</button></div>`:''}${mine||isAdmin()?` <a href="#" style="font-size:11px;opacity:.7;color:inherit" onclick="H.delMsg('${m.id}');return false">delete</a>`:''}</div></div>`}).join(''):'<p class="mu">No messages yet. Say hi!</p>'}</div><form class="row" onsubmit="return H.send(event)"><input name="t" class="sp" placeholder="Type a message" maxlength="500" autocomplete="off" style="margin:0"><button class="btn">Send</button></form>`},
+call(){return`<h2>Family call</h2><div class="card"><p>Start or join a live video call with your family, right inside the app. Everyone who taps a button below lands in the same call.</p><div class="row"><button class="btn" onclick="H.startRoomCall(true)">📞 Video call</button><button class="btn s" onclick="H.startRoomCall(false)">🎤 Voice only</button></div><p class="mu">Allow camera and microphone when asked. Works best on the same Wi-Fi or good mobile data; very locked-down networks can sometimes block the connection.</p></div>`},
+dms(){const others=members().filter(m=>m.id!==me.id);
+ if(!others.length)return'<h2>Direct Messages</h2><p class="mu">No other family members yet.</p>';
+ if(!dmWith)return`<h2>Direct Messages</h2><div class="card">${others.map(m=>{const un=F('notifs').filter(n=>n.uid===me.id&&!n.read&&n.kind==='dm'&&n.from===m.id).length;
+  return`<div class="row cm" style="cursor:pointer" onclick="H.openDM('${m.id}')">${av(m)}<div class="sp"><b>${esc(m.name)}</b></div>${un?`<span class="bd">${un} new</span>`:''}</div>`}).join('')}</div>`;
+ const other=U(dmWith);if(!other)return(dmWith=null,V.dms());const c=cid(me.id,dmWith),ms=dmMsgs[c]||[];
+ return`<div class="row"><button class="btn s sm" onclick="H.closeDM()">← Back</button><h2 class="sp" style="margin:0">${esc(other.name)}</h2><button class="btn sm" style="background:#16a34a" onclick="Call.startDM('${dmWith}',true)">📞 Call</button><button class="btn s sm" onclick="Call.startDM('${dmWith}',false)">🎤</button></div><div class="card" id="chatbox" style="max-height:60vh;overflow:auto">${ms.length?ms.map(m=>{const mine=m.uid===me.id;return`<div style="display:flex;gap:8px;margin:8px 0;${mine?'flex-direction:row-reverse':''}"><div style="max-width:75%;background:${mine?'var(--pr)':'var(--pr2)'};color:${mine?'#fff':'var(--tx)'};padding:8px 12px;border-radius:14px">${esc(m.text)}<div style="font-size:10px;opacity:.7;margin-top:2px">${dtt(m.ts)}${mine?` &middot; <a href="#" style="color:inherit" onclick="H.delDM('${m.id}');return false">delete</a>`:''}</div></div></div>`}).join(''):'<p class="mu">No messages yet. Say hi!</p>'}</div><form class="row" onsubmit="H.sendDM(event)"><input name="t" class="sp" placeholder="Type a message" maxlength="500" autocomplete="off" style="margin:0"><button class="btn">Send</button></form>`},
+home(){const ms=members(),pts=F('points'),ns=F('notes'),ac=F('acts'),no=F('notifs').filter(n=>n.uid===me.id),anns=F('anns').slice(0,3);
+ return`<div class="row"><h2 class="sp">Welcome back, ${esc(me.name)} 👋</h2>${isAdmin()?'<button class="btn s sm" onclick="H.ann()">📢 New Announcement</button>':''}</div>
+ ${anns.length?anns.map(a=>`<div class="card" style="border-left:4px solid var(--pr)"><div class="row"><span class="sp">📢 <b>${esc(nm(a.uid))}</b> ${esc(a.text)}</span>${isAdmin()?`<a href="#" class="mu" onclick="H.delAnn('${a.id}');return false">delete</a>`:''}</div><div class="mu">${dtt(a.ts)}</div></div>`).join(''):''}
+ <div class="grid" style="margin-bottom:14px"><div class="card" style="margin:0"><div class="mu">Your points</div><div class="pts">${bal(me.id)}</div></div><div class="card" style="margin:0"><div class="mu">Family members</div><div class="pts">${ms.length}</div></div>
+ <div class="card row" style="margin:0"><button class="btn" onclick="H.give()">⭐ Give Points</button>${me.role==='child'?'':'<button class="btn s" onclick="H.note()">📝 Create Note</button>'}</div></div>
+ <h3>Family members</h3><div class="grid" style="margin-bottom:14px">${ms.map(mcard).join('')}</div>
+ <div class="grid"><div class="card"><h3>Recent points</h3>${list(pts.slice(0,5),ptRow,'No points yet.')}</div><div class="card"><h3>Recent notes</h3>${list(ns.slice(0,5),n=>`<div class="cm"><b>${esc(n.title)}</b><div class="mu">${esc(nm(n.uid))} · ${dtt(n.ts)}</div></div>`,'No notes yet.')}</div>
+ <div class="card"><h3>Recent activity</h3>${list(ac.slice(0,6),a=>`<div class="cm">${esc(a.text)}<div class="mu">${dtt(a.ts)}</div></div>`,'Nothing yet.')}</div><div class="card"><h3>Notifications</h3>${list(no.slice(0,5),n=>`<div class="cm">${esc(n.text)}<div class="mu">${dtt(n.ts)}</div></div>`,'No notifications.')}</div></div>`},
+members(){return`<div class="row"><h2 class="sp">Family members</h2><button class="btn" onclick="H.give()">⭐ Give Points</button></div><div class="grid">${members().map(mcard).join('')}</div><div class="card" style="margin-top:14px"><h3>Points history</h3>${list(F('points'),ptRow,'No points yet.')}</div>`},
+notes(){if(me.role==='child')return'<p class="mu">Notes aren\'t available for your account.</p>';return`<div class="row"><h2 class="sp">Notes</h2><button class="btn" onclick="H.note()">📝 New note</button></div>${list(F('notes'),noteCard,'No notes yet.')}`},
+photos(){if(me.role==='child')return'<p class="mu">Photos aren\'t available for your account.</p>';return`<div class="row"><h2 class="sp">Photos</h2><label class="btn" style="margin:0">📷 Upload<input type="file" accept="image/*" hidden onchange="H.photo(this)"></label></div>${list(F('photos'),p=>`<div class="card"><div class="row">${av(U(p.uid))}<div class="sp"><b>${esc(nm(p.uid))}</b><div class="mu">${dtt(p.ts)}</div></div>${p.uid!==me.id?`<button class="btn s sm" onclick="H.report('${p.id}','photo')">Report</button>`:''}${p.uid===me.id||isAdmin()?`<button class="btn no sm" onclick="H.delPh('${p.id}')">Delete</button>`:''}</div><img class="ph" src="${p.src}" alt="">${esc(p.cap)}${cmts(p.id,F('comments').filter(c=>c.tid===p.id).reverse())}</div>`,'No photos yet.')}`},
+activity(){return`<h2>Family activity</h2><div class="card">${list(F('acts'),a=>`<div class="cm">${esc(a.text)}<div class="mu">${dtt(a.ts)}</div></div>`,'Nothing yet.')}</div>`},
+board(){const m=members().sort((a,b)=>bal(b.id)-bal(a.id));return`<h2>Leaderboard</h2><div class="card">${m.map((u,i)=>`<div class="row cm"><b style="width:28px">${['🥇','🥈','🥉'][i]||i+1}</b>${av(u)}<div class="sp"><b>${esc(u.name)}</b><div class="mu">@${esc(u.username)}</div></div><div class="pts">${bal(u.id)}</div></div>`).join('')}</div>`},
+notifs(){return`<h2>Notifications</h2><div class="card">${list(F('notifs').filter(n=>n.uid===me.id),n=>`<div class="cm">${esc(n.text)}<div class="mu">${dtt(n.ts)}</div></div>`,'No notifications.')}</div>`},
+profile(){return`<h2>My profile</h2><form class="card" onsubmit="H.profile(event)"><div class="row">${av(me,'l')}<div><b>@${esc(me.username)}</b><div class="mu">${me.role}</div></div></div><label>Name</label><input name="name" value="${esc(me.name)}" required><label>New profile picture</label><input name="pic" type="file" accept="image/*"><h3>Change password</h3><label>Current password</label><input name="cpw" type="password"><label>New password</label><input name="npw" type="password"><button class="btn">Save</button></form>`},
+admin(){if(!isAdmin())return'';const us=DB.users.filter(u=>u.fid===me.fid),fam=DB.families.find(f=>f.id===me.fid);
+ const S=[['req','Account Requests'],['users','Members'],['rep','Reports'],['set','Settings']];let b='';
+ if(adminSec==='req')b=list(us.filter(u=>u.status==='pending'),u=>`<div class="card row"><div class="mu" style="width:100%">ACCOUNT REQUEST</div>${av(u,'l')}<div class="sp"><b>${esc(u.name)}</b><div>@${esc(u.username)}</div><div class="mu">Requested ${dt(u.ts)}</div></div><button class="btn ok" onclick="H.setStatus('${u.id}','approved')">Approve</button><button class="btn no" onclick="H.setStatus('${u.id}','rejected')">Reject</button></div>`,'No pending requests.');
+ if(adminSec==='users')b=us.filter(u=>u.status!=='pending').map(u=>`<div class="card"><div class="row">${av(u)}<div class="sp"><b>${esc(u.name)}</b> <span class="bd">${u.role}</span> <span class="bd">${u.status}</span><div class="mu">@${esc(u.username)}</div></div></div>${u.id===me.id?'<p class="mu">This is you.</p>':`<div class="row" style="margin-top:8px"><button class="btn s sm" onclick="H.edit('${u.id}')">Edit</button><button class="btn s sm" onclick="H.reset('${u.id}')">Reset password</button>${['admin','member','child'].filter(r=>r!==u.role).map(r=>`<button class="btn s sm" onclick="H.role('${u.id}','${r}')">Make ${r}</button>`).join('')}${u.status==='approved'?`<button class="btn s sm" onclick="H.setStatus('${u.id}','disabled')">Disable</button>`:`<button class="btn ok sm" onclick="H.setStatus('${u.id}','approved')">${u.status==='rejected'?'Approve':'Re-enable'}</button>`}<button class="btn no sm" onclick="H.delUser('${u.id}')">Delete</button></div>`}</div>`).join('');
+ if(adminSec==='rep')b=list(F('reports'),r=>{const p=DB.photos.find(x=>x.id===r.tid);return`<div class="card"><b>Reported by ${esc(nm(r.by))}</b>: ${esc(r.why)}${p?`<img class="ph" src="${p.src}" alt="">`:'<p class="mu">Item no longer exists.</p>'}<div class="row">${p?`<button class="btn no sm" onclick="H.delPh('${p.id}')">Delete photo</button>`:''}<button class="btn s sm" onclick="H.dismiss('${r.id}')">Dismiss</button></div></div>`},'No reports.');
+ if(adminSec==='set')b=`<div class="card"><h3>${esc(fam.name)}</h3><p>Family code for new members: <b style="font-size:1.3rem;letter-spacing:2px">${fam.code}</b></p><div class="row"><button class="btn s" onclick="H.fam()">Rename family</button><button class="btn s" onclick="H.newCode()">New code</button></div></div>`;
+ return`<h2>Admin Panel</h2><div class="tabs2" style="overflow-x:auto">${S.map(s=>`<button class="chip ${adminSec===s[0]?'on':''}" onclick="adminSec='${s[0]}';render()">${s[1]}</button>`).join('')}</div>${b}`}};
+const _render=render;render=function(){_render();const c=document.getElementById('chatbox');if(c)c.scrollTop=c.scrollHeight};
+/* ---- install prompt: offers "Install app" or "Not now" ---- */
+(function(){
+ const K='fp_install_no',standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+ let t=0;try{t=+localStorage.getItem(K)||0}catch(e){}
+ if(standalone||Date.now()-t<7*864e5)return;
+ const ua=navigator.userAgent,ios=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),chromeIOS=/CriOS|FxiOS|EdgiOS/.test(ua);
+ let dp=null,shown=false;
+ function bar(msg,yes){if(shown)return;shown=true;const d=document.createElement('div');
+  d.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:40;max-width:460px;margin:0 auto;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:16px;padding:14px;box-shadow:0 8px 30px #0004;font-size:14px';
+  d.innerHTML='<div style="display:flex;gap:12px;align-items:center"><img src="apple-touch-icon.png" width="44" height="44" style="border-radius:10px" alt=""><div><b>Install Family Points</b><div class="mu">'+msg+'</div></div></div><div class="row" style="margin-top:10px;justify-content:flex-end"><button class="btn s sm" id="inNo">Not now</button>'+(yes?'<button class="btn sm" id="inYes">'+yes+'</button>':'')+'</div>';
+  document.body.appendChild(d);
+  const close=()=>{d.remove();try{localStorage.setItem(K,Date.now())}catch(e){}};
+  d.querySelector('#inNo').onclick=close;
+  const y=d.querySelector('#inYes');if(y)y.onclick=async()=>{if(dp){dp.prompt();await dp.userChoice}d.remove()}}
+ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;setTimeout(()=>bar('Add it to your home screen for quick access.','Install'),1200)});
+ window.addEventListener('appinstalled',()=>{const b=document.getElementById('inNo');if(b)b.click()});
+ if(ios)setTimeout(()=>bar(chromeIOS?'Open this page in Safari, then tap Share and Add to Home Screen.':'Tap the Share button, then Add to Home Screen.',null),1500);
+})();
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* =============== In-app calling (WebRTC, signaled via Firebase) =============== */
+const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]};
+let localStream=null,dmCall=null,room=null,ringing=null,ringWatch=null;
+async function getMedia(video){try{return await navigator.mediaDevices.getUserMedia({audio:true,video:video?{width:320,height:240}:false})}
+ catch(e){toast('Could not access camera/microphone');throw e}}
+function cleanupLocal(){if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}}
+function newPC(){return new RTCPeerConnection(ICE)}
+function ovl(){return document.getElementById('callOverlay')}
+function showCallUI(mode,name,video){const o=ovl();o.style.display='flex';
+ o.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;color:#fff"><b>${mode==='room'?'Family Call':esc(name)}</b><span id="callStatus" style="font-size:12px;opacity:.7">${mode==='outgoing'?'Ringing…':mode==='room'?'Connecting…':''}</span></div>
+ <div id="tiles" style="flex:1;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));padding:0 12px;align-content:start;overflow:auto"></div>
+ <div style="display:flex;justify-content:center;gap:14px;padding:20px"><button class="btn s" id="micBtn" onclick="Call.toggleMic()">🎤 Mute</button>${video?`<button class="btn s" id="camBtn" onclick="Call.toggleCam()">📷 Camera</button>`:''}<button class="btn no" onclick="${mode==='room'?'Call.leaveRoom()':'Call.hangupDM()'}">📴 Leave</button></div>`}
+function hideCallUI(){const o=ovl();if(o){o.style.display='none';o.innerHTML=''}}
+function tile(id2,name,mine){let v=document.getElementById('tile-'+id2);const tiles=document.getElementById('tiles');if(!tiles)return null;
+ if(!v){v=document.createElement('div');v.id='tile-'+id2;v.className='tile';v.innerHTML=`<video autoplay playsinline ${mine?'muted':''}></video><div class="tn">${esc(name)}</div>`;mine?tiles.appendChild(v):tiles.insertBefore(v,tiles.firstChild)}
+ return v}
+function setLocalVideo(stream,video){const v=tile('local','You',true);if(!v)return;const el=v.querySelector('video');el.srcObject=stream;if(!video)el.style.display='none'}
+function setRemoteVideo(uid,name,stream){const v=tile(uid,name,false);if(!v)return;v.querySelector('video').srcObject=stream;const st=document.getElementById('callStatus');if(st)st.textContent=''}
+function removeTile(uid){const v=document.getElementById('tile-'+uid);if(v)v.remove()}
+Call={
+async startDM(uid,video){if(dmCall||room)return toast('Already in a call');const other=U(uid);if(!other)return;
+ const c=cid(me.id,uid);try{localStream=await getMedia(video)}catch(e){return}
+ const pc=newPC();localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+ pc.ontrack=e=>{const v=tile(uid,other.name,false),ms=v.querySelector('video').srcObject||new MediaStream();ms.addTrack(e.track);setRemoteVideo(uid,other.name,ms);dmCall&&(dmCall.connected=true)};
+ dmCall={cid:c,otherUid:uid,otherName:other.name,pc,role:'caller',video,connected:false};
+ showCallUI('outgoing',other.name,video);setLocalVideo(localStream,video);
+ const dmRef=fd.ref('families/'+me.fid+'/rtc/dm/'+c);await dmRef.remove();
+ const candRef=dmRef.child('callerCandidates');pc.onicecandidate=e=>{if(e.candidate)candRef.push(e.candidate.toJSON())};
+ const offer=await pc.createOffer();await pc.setLocalDescription(offer);
+ await dmRef.child('offer').set({sdp:offer.sdp,type:offer.type});await dmRef.child('status').set('ringing');
+ await fd.ref('families/'+me.fid+'/rtc/ring/'+uid).set({from:me.id,name:me.name,video,cid:c,ts:Date.now()});sendPush(uid,'📞 '+me.name+' is calling',video?'Video call':'Voice call');
+ const offAns=dmRef.child('answer').on('value',async s=>{const v=s.val();if(v&&pc.signalingState==='have-local-offer')await pc.setRemoteDescription(new RTCSessionDescription(v))});
+ const offCand=dmRef.child('calleeCandidates').on('child_added',s=>{const v=s.val();if(v)pc.addIceCandidate(new RTCIceCandidate(v)).catch(()=>{})});
+ const offSt=dmRef.child('status').on('value',s=>{const v=s.val();if(v==='declined'){toast(other.name+' declined the call');Call._endDM(true)}if(v==='ended'&&dmCall&&dmCall.role==='caller'){toast('Call ended');Call._endDM(false)}});
+ dmCall.offs=[()=>dmRef.child('answer').off('value',offAns),()=>dmRef.child('calleeCandidates').off('child_added',offCand),()=>dmRef.child('status').off('value',offSt)];
+ dmCall.timer=setTimeout(()=>{if(dmCall&&dmCall.role==='caller'&&!dmCall.connected){toast('No answer');Call.hangupDM()}},30000)},
+async acceptDM(){if(!ringing)return;const r=ringing,c=r.cid,name=r.name,video=r.video,from=r.from;hideIncomingBanner();
+ try{localStream=await getMedia(video)}catch(e){await fd.ref('families/'+me.fid+'/rtc/ring/'+me.id).remove();return}
+ const pc=newPC();localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+ pc.ontrack=e=>{const v=tile(from,name,false),ms=v.querySelector('video').srcObject||new MediaStream();ms.addTrack(e.track);setRemoteVideo(from,name,ms)};
+ dmCall={cid:c,otherUid:from,otherName:name,pc,role:'callee',video,connected:true};
+ setLocalVideo(localStream,video);showCallUI('active',name,video);
+ const dmRef=fd.ref('families/'+me.fid+'/rtc/dm/'+c);const candRef=dmRef.child('calleeCandidates');
+ pc.onicecandidate=e=>{if(e.candidate)candRef.push(e.candidate.toJSON())};
+ const offSnap=await dmRef.child('offer').get(),offerVal=offSnap.val();
+ if(!offerVal){toast('Call is no longer available');Call._endDM(true);return}
+ await pc.setRemoteDescription(new RTCSessionDescription(offerVal));
+ const answer=await pc.createAnswer();await pc.setLocalDescription(answer);
+ await dmRef.child('answer').set({sdp:answer.sdp,type:answer.type});await dmRef.child('status').set('active');
+ await fd.ref('families/'+me.fid+'/rtc/ring/'+me.id).remove();
+ const offCand=dmRef.child('callerCandidates').on('child_added',s=>{const v=s.val();if(v)pc.addIceCandidate(new RTCIceCandidate(v)).catch(()=>{})});
+ const offSt=dmRef.child('status').on('value',s=>{if(s.val()==='ended'){toast('Call ended');Call._endDM(false)}});
+ dmCall.offs=[()=>dmRef.child('callerCandidates').off('child_added',offCand),()=>dmRef.child('status').off('value',offSt)]},
+async declineDM(){if(!ringing)return;const r=ringing;hideIncomingBanner();ringing=null;
+ await fd.ref('families/'+me.fid+'/rtc/ring/'+me.id).remove();
+ await fd.ref('families/'+me.fid+'/rtc/dm/'+r.cid+'/status').set('declined')},
+async hangupDM(){const c=dmCall&&dmCall.cid;if(c){try{await fd.ref('families/'+me.fid+'/rtc/dm/'+c+'/status').set('ended')}catch(e){}}Call._endDM(true)},
+_endDM(rm){if(dmCall){clearTimeout(dmCall.timer);try{dmCall.pc.close()}catch(e){}(dmCall.offs||[]).forEach(f=>f());if(rm)fd.ref('families/'+me.fid+'/rtc/dm/'+dmCall.cid).remove().catch(()=>{})}
+ dmCall=null;cleanupLocal();hideCallUI()},
+async startRoom(video){if(room||dmCall)return toast('Already in a call');
+ try{localStream=await getMedia(video)}catch(e){return}
+ room={pcs:{},video,offs:[]};showCallUI('room',null,video);setLocalVideo(localStream,video);
+ const pRef=fd.ref('families/'+me.fid+'/rtc/room/participants'),myRef=pRef.child(me.id);
+ await myRef.set({name:me.name,video,ts:Date.now()});myRef.onDisconnect().remove();
+ const offAdd=pRef.on('child_added',s=>{if(s.key!==me.id)connectPeer(s.key)});
+ const offRem=pRef.on('child_removed',s=>{if(s.key!==me.id)disconnectPeer(s.key)});
+ room.offs=[()=>pRef.off('child_added',offAdd),()=>pRef.off('child_removed',offRem),()=>myRef.onDisconnect().cancel()]},
+async leaveRoom(){if(!room)return;Object.keys(room.pcs).forEach(disconnectPeer);room.offs.forEach(f=>f());
+ try{await fd.ref('families/'+me.fid+'/rtc/room/participants/'+me.id).remove()}catch(e){}
+ room=null;cleanupLocal();hideCallUI()},
+toggleMic(){if(!localStream)return;const t=localStream.getAudioTracks()[0];if(!t)return;t.enabled=!t.enabled;const b=document.getElementById('micBtn');if(b)b.textContent=t.enabled?'🎤 Mute':'🔇 Unmute'},
+toggleCam(){if(!localStream)return;const t=localStream.getVideoTracks()[0];if(!t)return;t.enabled=!t.enabled;const b=document.getElementById('camBtn');if(b)b.textContent=t.enabled?'📷 Camera':'🚫 Camera off'}
+};
+async function connectPeer(uid){if(!room||room.pcs[uid])return;const c=cid(me.id,uid),pairRef=fd.ref('families/'+me.fid+'/rtc/room/pairs/'+c);
+ const pc=newPC();room.pcs[uid]=pc;localStream.getTracks().forEach(t=>pc.addTrack(t,localStream));
+ pc.ontrack=e=>{const v=tile(uid,nm(uid),false),ms=v.querySelector('video').srcObject||new MediaStream();ms.addTrack(e.track);setRemoteVideo(uid,nm(uid),ms)};
+ tile(uid,nm(uid),false);
+ const iOffer=me.id<uid,mine=iOffer?'callerCandidates':'calleeCandidates',theirs=iOffer?'calleeCandidates':'callerCandidates';
+ pc.onicecandidate=e=>{if(e.candidate)pairRef.child(mine).push(e.candidate.toJSON())};
+ const candOff=pairRef.child(theirs).on('child_added',s=>{const v=s.val();if(v)pc.addIceCandidate(new RTCIceCandidate(v)).catch(()=>{})});
+ let offs=[()=>pairRef.child(theirs).off('child_added',candOff)];
+ if(iOffer){await pairRef.remove();const offer=await pc.createOffer();await pc.setLocalDescription(offer);await pairRef.child('offer').set({sdp:offer.sdp,type:offer.type});
+  const ansOff=pairRef.child('answer').on('value',async s=>{const v=s.val();if(v&&pc.signalingState==='have-local-offer')await pc.setRemoteDescription(new RTCSessionDescription(v))});
+  offs.push(()=>pairRef.child('answer').off('value',ansOff))}
+ else{const offOff=pairRef.child('offer').on('value',async s=>{const v=s.val();if(v&&pc.signalingState==='stable'&&!pc.currentRemoteDescription){await pc.setRemoteDescription(new RTCSessionDescription(v));const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await pairRef.child('answer').set({sdp:answer.sdp,type:answer.type})}});
+  offs.push(()=>pairRef.child('offer').off('value',offOff))}
+ pc._offs=offs}
+function disconnectPeer(uid){const pc=room&&room.pcs[uid];if(!pc)return;(pc._offs||[]).forEach(f=>f());try{pc.close()}catch(e){}delete room.pcs[uid];removeTile(uid)}
+let ringAudio=null,ringNotif=null,ringVib=null;
+function startRingtone(){stopRingtone();try{
+ const ctx=new (window.AudioContext||window.webkitAudioContext)();
+ const beep=()=>{if(!ringAudio)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=880;g.gain.value=0.0001;o.connect(g);g.connect(ctx.destination);const t=ctx.currentTime;
+  g.gain.exponentialRampToValueAtTime(0.25,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.35);o.start(t);o.stop(t+0.4);
+  const o2=ctx.createOscillator(),g2=ctx.createGain();o2.type='sine';o2.frequency.value=660;g2.gain.value=0.0001;o2.connect(g2);g2.connect(ctx.destination);
+  g2.gain.exponentialRampToValueAtTime(0.25,t+0.5);g2.gain.exponentialRampToValueAtTime(0.0001,t+0.83);o2.start(t+0.5);o2.stop(t+0.85)};
+ ringAudio=ctx;beep();ringAudio._t=setInterval(beep,1600)}catch(e){}
+ try{ringVib=setInterval(()=>navigator.vibrate&&navigator.vibrate([250,150,250]),1600);navigator.vibrate&&navigator.vibrate([250,150,250])}catch(e){}}
+function stopRingtone(){if(ringAudio){try{clearInterval(ringAudio._t);ringAudio.close()}catch(e){}ringAudio=null}
+ if(ringVib){clearInterval(ringVib);ringVib=null}try{navigator.vibrate&&navigator.vibrate(0)}catch(e){}
+ if(ringNotif){try{ringNotif.close()}catch(e){}ringNotif=null}}
+function showIncomingBanner(r){hideIncomingBanner();const name=r.name||nm(r.from);
+ const d=document.createElement('div');d.id='ringBanner';
+ d.style.cssText='position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px;max-width:420px;margin:0 auto;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:14px;padding:14px;z-index:60;box-shadow:0 8px 24px #0005';
+ d.innerHTML=`<div class="row"><b class="sp">📞 ${esc(name)} is calling…</b></div><div class="row" style="margin-top:8px;justify-content:flex-end"><button class="btn no sm" onclick="Call.declineDM()">Decline</button><button class="btn ok sm" onclick="Call.acceptDM()">Accept</button></div>`;
+ document.body.appendChild(d);startRingtone();
+ try{if('Notification' in window&&Notification.permission==='granted'){ringNotif=new Notification(name+' is calling',{body:'Tap to open Family Points',icon:'icon-192.png',requireInteraction:true,tag:'fp-call'});ringNotif.onclick=()=>{window.focus();ringNotif.close()}}}catch(e){}}
+function hideIncomingBanner(){const d=document.getElementById('ringBanner');if(d)d.remove();stopRingtone()}
+function watchRing(){fd.ref('families/'+me.fid+'/rtc/ring/'+me.id).on('value',s=>{const v=s.val();
+ if(v&&!dmCall&&!room&&(!ringing||ringing.ts!==v.ts)){ringing=v;showIncomingBanner(v)}
+ if(!v&&ringing){hideIncomingBanner();ringing=null}})}
+/* =============== end calling =============== */
+fa.onAuthStateChanged(u=>{if(busy)return;if(u)enter(u);else{me=null;render()}});
+</script></body></html>
